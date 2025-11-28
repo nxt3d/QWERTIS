@@ -530,9 +530,32 @@
                 if (this.word.length !== 5) return; // Only twist 5-letter words
 
                 const newVertical = !this.vertical;
-                // Check collision with new orientation at current x,y
-                if (!this.collides(0, 0, newVertical)) {
+                let newX = this.x;
+                let newY = this.y;
+
+                // Rotate around the middle letter (index 2)
+                if (this.vertical) {
+                    // Vertical to Horizontal
+                    // Center was (x, y+2). New center (newX+2, newY) must equal (x, y+2).
+                    // newX = x - 2, newY = y + 2
+                    newX -= 2;
+                    newY += 2;
+                } else {
+                    // Horizontal to Vertical
+                    // Center was (x+2, y). New center (newX, newY+2) must equal (x+2, y).
+                    // newX = x + 2, newY = y - 2
+                    newX += 2;
+                    newY -= 2;
+                }
+
+                // Check collision with new orientation AND new position
+                const dx = newX - this.x;
+                const dy = newY - this.y;
+
+                if (!this.collides(dx, dy, newVertical)) {
                     this.vertical = newVertical;
+                    this.x = newX;
+                    this.y = newY;
                 }
             }
 
