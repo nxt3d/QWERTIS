@@ -564,6 +564,10 @@
             dropInterval = DROP_INTERVAL_INIT;
             isFastDropping = false; // Reset fast drop state
             gameOverEl.style.display = 'none';
+            
+            // Ensure mobile input is cleared
+            mobileInput.value = '';
+            
             activePiece = new Piece();
             if (animationId) cancelAnimationFrame(animationId);
             
@@ -755,7 +759,7 @@
             }
 
             // Avoid double-firing when mobile input is focused (which handles characters via 'input' event)
-            if (e.target === mobileInput && e.key.length === 1) {
+            if (e.target === mobileInput && e.key.length === 1 && e.key !== ' ') {
                 return;
             }
 
