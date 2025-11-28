@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QWERTIS. A falling-letters game that teaches you to type.</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        body {
+            background-color: #222; /* Lighter Dark Gray */
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        #arcade-frame {
+            background: #2e2e2e; /* Even lighter for contrast against #222 */
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8); /* Single shadow */
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            border: 2px solid #444; /* Thinner border */
+        }
+
+        #game-area {
+            position: relative;
+            border: 2px solid #333; /* Thinner and grayer */
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            order: 2;
+            background-color: #121212; /* Very Dark Gray (Not Black) */
+            display: flex;
+            justify-content: center; /* Ensure canvas is centered */
+        }
+
+        canvas {
+            background-color: #000;
+            display: block;
+        }
+
+        #side-column {
+            width: 140px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Reduced gap */
+            padding: 0; /* Removed padding */
+            position: relative;
+            order: 1;
+        }
+
+        #stats-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Reduced gap */
+        }
+
+        #info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Reduced gap */
+            margin-top: auto;
+        }
+
+        .panel-box {
+            background: #222;
+            border: 1px solid #444; /* Thinner border */
+            padding: 8px; /* Reduced padding */
+            text-align: center;
+            border-radius: 4px; /* Tighter radius */
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .panel-label {
+            color: #aaa;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .panel-value {
+            color: #4CAF50;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border: 4px solid #fff;
+            text-align: center;
+            display: none;
+            pointer-events: auto;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        #game-over h1 {
+            margin-top: 0;
+            color: #ff4444;
+            font-size: 32px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 18px;
+            margin: 10px 2px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            border: 2px solid #3d8b40;
+            box-shadow: 0 4px 0 #2e6b31;
+            transition: all 0.1s;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #2e6b31;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .instructions {
+            background: #222;
+            padding: 8px; /* Reduced padding */
+            border-radius: 4px;
+            border: 1px solid #444; /* Thinner border */
+            color: #888;
+            font-size: 10px; /* Smaller font */
+            line-height: 1.3;
+            text-align: left;
+        }
+        
+        .instructions b {
+            color: #ddd;
+        }
+
+        .credits {
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .credits a {
+            color: #888;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .credits a:hover {
+            color: #fff;
+        }
+
+        /* Hidden Input for Mobile Keyboard */
+        #mobile-input {
+            position: absolute;
+            opacity: 0;
+            top: -1000px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            body {
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+                padding: 10px;
+            }
+            
+            #arcade-frame {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+                padding: 15px;
+                width: 95%;
+                max-width: 400px;
+                box-sizing: border-box;
+            }
+
+            #side-column {
+                width: 100%;
+                height: auto;
+                display: contents; /* Allows children to be direct flex items of arcade-frame */
+            }
+
+            /* Top: Stats */
+            #stats-panel {
+                order: 1;
+                flex-direction: row;
+                width: 100%;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            
+            .panel-box {
+                flex: 1;
+                padding: 10px;
+            }
+
+            .panel-value {
+                font-size: 20px;
+            }
+
+            /* Middle: Game */
+            #game-area {
+                order: 2;
+                width: 100%;
+                /* Maintain aspect ratio or fit screen */
+                display: flex;
+                justify-content: center;
+            }
+
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
+
+            /* Bottom: Info */
+            #info-panel {
+                order: 3;
+                width: 100%;
+                margin-top: 0;
+            }
+
+            .instructions {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hidden input to trigger keyboard on mobile -->
+    <input type="text" id="mobile-input" autocomplete="off">
+
+    <div id="arcade-frame">
+        <!-- Left Side Panel (Wrapped in side-column for desktop layout) -->
+        <div id="side-column">
+            
+            <div class="game-title">QWERTIS</div>
+
+            <div id="stats-panel">
+                <div class="panel-box">
+                    <div class="panel-label">Score</div>
+                    <div class="panel-value" id="score">0</div>
+                </div>
+                <div class="panel-box">
+                    <div class="panel-label">Lines</div>
+                    <div class="panel-value" id="lines">0</div>
+                </div>
+            </div>
+
+            <div id="info-panel">
+                <div class="instructions">
+                    <b>HOW TO PLAY</b><br><br>
+                    TYPE words to turn blocks <span style="color:#4CAF50">GREEN</span>.<br>
+                    <br>
+                    <b>ARROWS</b> Move<br>
+                    <b>SPACE</b> Twist (5-letter words only)<br>
+                    <b>ENTER</b> Drop<br>
+                    <br>
+                    Correct letter: +1<br>
+                    Green Row: +10<br>
+                    Wrong letter: -1 & DROPS!
+                    <br><br>
+                    <span style="color:#666; font-style:italic">On Mobile: Tap Game to Open Keyboard!</span>
+                </div>
+
+                <div class="credits">
+                    Created by <a href="https://github.com/nxt3d" target="_blank">@nxt3d</a><br>
+                    <br>
+                    <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GPLv3 License</a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Game Area -->
+        <div id="game-area">
+            <canvas id="gameCanvas" width="300" height="600"></canvas>
+            <div id="game-over">
+                <h1>GAME OVER</h1>
+                <p>SCORE: <span id="final-score">0</span></p>
+                <button onclick="resetGame()">TRY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const linesEl = document.getElementById('lines');
+        const finalScoreEl = document.getElementById('final-score');
+        const gameOverEl = document.getElementById('game-over');
+        const mobileInput = document.getElementById('mobile-input');
+        const gameArea = document.getElementById('game-area');
+
+        // Game Constants
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const DROP_INTERVAL_INIT = 1000;
+
+        // Game State
+        let grid = []; // 20x10 array
+        let activePiece = null;
+        let score = 0;
+        let totalLinesCleared = 0;
+        let lastTime = 0;
+        let dropCounter = 0;
+        let dropInterval = DROP_INTERVAL_INIT;
+        let isFastDropping = false;
+        let isGameOver = false;
+        let animationId = null;
+        
+        console.log("QWERTIS v2.0 Loaded");
+
+        // Mobile Keyboard Trigger
+        gameArea.addEventListener('click', () => {
+            mobileInput.focus();
+        });
+
+        // Word Dictionary
+        const WORDS = [
+            // Common English (Lowercase)
+            "the", "and", "for", "not", "you", "but", "his", "her", "she", "him",
+            "day", "get", "job", "low", "art", "key", "law", "bit", "car", "dog",
+            "cat", "bat", "rat", "sun", "run", "fun", "top", "map", "tap", "cap",
+            "red", "blue", "one", "two", "six", "ten", "sky", "fly", "try", "dry",
+            "game", "play", "word", "text", "font", "grid", "line", "loop", "math",
+            "void", "main", "char", "bool", "long", "case", "else", "this", "true",
+            "list", "tree", "heap", "hash", "sort", "find", "path", "user",
+            "view", "edit", "copy", "save", "load", "exit", "quit", "stop", "wait",
+            "apple", "basic", "block", "build", "class", "click", "close", "color",
+            "const", "count", "debug", "enter", "error", "event", "false", "fetch",
+            "float", "frame", "group", "hover", "image", "index", "input", "label",
+            "layer", "level", "limit", "local", "logic", "match", "model", "mouse",
+            "param", "pause", "pixel", "print", "query", "range", "ratio", "react",
+            "reset", "route", "scale", "scope", "shift", "slice", "solid", "sound",
+            "space", "speed", "stack", "state", "style", "table", "theme", "timer",
+            "title", "token", "total", "touch", "trace", "track", "value", "video",
+            "width", "write", "while", "world", "yield",
+            // Tech & Acronyms (Uppercase/Mixed)
+            "Code", "Java", "HTML", "Data", "Node", "Ruby", "Byte", "File", "Type",
+            "Algo", "Vue", "JSON", "XML", "SQL", "AWS", "Unix", "Bash", "SaaS",
+            "PaaS", "IaaS", "REST", "SOAP", "API", "SDK", "CLI", "GUI", "SSH", 
+            "SSL", "TLS", "TCP", "IP", "UDP", "DNS", "HTTP", "FTP", "SMTP", "IMAP",
+            "RAM", "ROM", "CPU", "GPU", "SSD", "USB", "LED", "PDF", "ZIP", "EXE",
+            // CamelCase & PascalCase (Max 5 chars)
+            "myVar", "toInt", "setId", "mkDir", "isOk", "toGo", "noOp", "doIt", "onUp",
+            "rmDir", "chMod", "chOwn", "myId", "toHex", "isOn", "isOff", "reDo", "unDo",
+            "iPad", "eBay", "iPod", "macOS", "iOS", "toDo", "inUse", "noGo", "myObj", "vBox",
+            "isSet", "noNaN", "Array", "Class", "Const", "Event", "Float", "Image", 
+            "Index", "Input", "Label", "Layer", "Level", "Limit", "Local", "Logic", 
+            "Match", "Model", "Mouse", "Param", "Pixel", "Print", "Query", "Range", 
+            "Ratio", "React", "Reset", "Route", "Scale", "Scope", "Shift", "Slice", 
+            "Solid", "Sound", "Space", "Speed", "Stack", "State", "Style", "Table", 
+            "Theme", "Timer", "Title", "Token", "Total", "Touch", "Trace", "Track", 
+            "Value", "Video", "Width", "Write", "While", "World", "Yield",
+            // Constants
+            "KEY_I", "PI_V", "ENV", "API", "MAX", "MIN", "ID",
+            // Numbers & Symbols
+            "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+            "12", "25", "50", "99", "10", "24", "88", "77", "33",
+            "{}", "();", "[]", "<>", "=>", "++", "--", "&&", "||",
+            "#ID", ".CL", "$V", "!!", "!=", "==", "+=", "-=", "*=", "/="
+        ];
+        
+        const SMALL_WORDS = [
+            "a", "I", "it", "is", "at", "on", "in", "to", "do", "go", 
+            "up", "my", "we", "he", "me", "no", "of", "or", "by", "so",
+            "as", "be", "if", "hi", "lo", "ok", "oh", "am", "an",
+            "JS", "UI", "UX", "API", "CSS", "DOM", "Git", "Srv", "Bin", 
+            "Hex", "RGB", "HSL", "var", "let", "int", "map", "set", "get", 
+            "put", "del", "run", "log", "bug", "fix", "net", "web", "app", 
+            "bot", "AI", "ML", "VR", "AR", "XR",
+            // Numbers & Symbols
+             "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+             "{", "}", ";", ":", ",", ".", "?", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "-", "+", "=", "<", ">", "/", "[", "]", "|"
+        ];
+
+        // Colors
+        const COLOR_EMPTY = '#000';
+        const COLOR_GREEN = '#4CAF50'; // Typed/Active Green
+        const COLOR_GRAY = '#555';     // Untyped/Dead Gray
+        const COLOR_ACTIVE_TEXT = '#FFF';
+        const COLOR_TYPED_TEXT = '#AAFFAA';
+        const COLOR_BG = '#111';
+
+        function initGrid() {
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        }
+
+        class Piece {
+            constructor() {
+                // 50% chance of small word
+                if (Math.random() < 0.5) {
+                    this.word = SMALL_WORDS[Math.floor(Math.random() * SMALL_WORDS.length)];
+                } else {
+                    this.word = WORDS[Math.floor(Math.random() * WORDS.length)];
+                }
+                
+                this.vertical = false; // No rotation allowed in updated rules
+
+                // Ensure word fits in width initially (horizontal spawn)
+                // User requested max width 5
+                if (this.word.length > 5) {
+                    this.word = this.word.substring(0, 5);
+                }
+                
+                // Start centered
+                this.x = Math.floor((COLS - this.word.length) / 2);
+                this.y = 0;
+                
+                this.typedIndex = 0; // How many chars currently typed
+                this.isLocked = false;
+                this.hasError = false; // Track if user made a mistake on this word
+            }
+
+            // Helper to get blocks occupied by this piece
+            getBlocks(x = this.x, y = this.y, vertical = this.vertical) {
+                let blocks = [];
+                for (let i = 0; i < this.word.length; i++) {
+                    let bx = x + (vertical ? 0 : i);
+                    let by = y + (vertical ? i : 0);
+                    blocks.push({ x: bx, y: by, char: this.word[i], index: i });
+                }
+                return blocks;
+            }
+
+            draw() {
+                const blocks = this.getBlocks();
+                for (let b of blocks) {
+                    const bx = b.x * BLOCK_SIZE;
+                    const by = b.y * BLOCK_SIZE;
+                    
+                    // Determine color
+                    let fillColor = '#333'; // Default falling color
+                    let textColor = '#FFF';
+
+                    if (b.index < this.typedIndex) {
+                        fillColor = COLOR_GREEN; // Already typed letters are green
+                        textColor = '#000';
+                    } else if (this.typedIndex === this.word.length) {
+                        fillColor = COLOR_GREEN;
+                        textColor = '#000';
+                    }
+
+                    // Draw Block
+                    ctx.fillStyle = fillColor;
+                    ctx.fillRect(bx, by, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                    // Draw Text
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 20px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(b.char, bx + BLOCK_SIZE/2, by + BLOCK_SIZE/2);
+                }
+                
+                // Draw outline for the whole word block
+                ctx.strokeStyle = '#FFF';
+                ctx.lineWidth = 1;
+                let w = this.vertical ? BLOCK_SIZE : this.word.length * BLOCK_SIZE;
+                let h = this.vertical ? this.word.length * BLOCK_SIZE : BLOCK_SIZE;
+                ctx.strokeRect(this.x * BLOCK_SIZE, this.y * BLOCK_SIZE, w, h);
+            }
+
+            move(dx, dy) {
+                if (!this.collides(dx, dy)) {
+                    this.x += dx;
+                    this.y += dy;
+                    return true; // Moved
+                }
+                return false; // Blocked
+            }
+
+            collides(dx, dy, vertical = this.vertical) {
+                const blocks = this.getBlocks(this.x + dx, this.y + dy, vertical);
+                for (let b of blocks) {
+                    // Bounds
+                    if (b.x < 0 || b.x >= COLS || b.y >= ROWS) return true;
+
+                    // Grid collision
+                    if (b.y >= 0 && grid[b.y][b.x] !== null) return true;
+                }
+                return false;
+            }
+
+            lock() {
+                const fullyTyped = (this.typedIndex === this.word.length);
+                const color = fullyTyped ? 'GREEN' : 'GRAY';
+                
+                const blocks = this.getBlocks();
+
+                for (let b of blocks) {
+                    if (b.y >= 0 && b.y < ROWS && b.x >= 0 && b.x < COLS) {
+                        grid[b.y][b.x] = {
+                            char: b.char,
+                            type: color
+                        };
+                    }
+                }
+            }
+
+            rotate() {
+                if (this.word.length !== 5) return; // Only twist 5-letter words
+
+                const newVertical = !this.vertical;
+                // Check collision with new orientation at current x,y
+                if (!this.collides(0, 0, newVertical)) {
+                    this.vertical = newVertical;
+                }
+            }
+
+            typeChar(key) {
+                if (this.typedIndex < this.word.length) {
+                    const targetChar = this.word[this.typedIndex];
+                    // Case-sensitive matching: "a" !== "A"
+                    if (key === targetChar) {
+                        this.typedIndex++;
+                        return { correct: true, complete: this.typedIndex === this.word.length };
+                    } else {
+                        // Penalty: No backtracking, just return false
+                        this.hasError = true;
+                        return { correct: false };
+                    }
+                }
+                return { correct: false, ignored: true }; // Already done or invalid
+            }
+        }
+
+        function resetGame() {
+            initGrid();
+            score = 0;
+            totalLinesCleared = 0;
+            scoreEl.innerText = score;
+            linesEl.innerText = totalLinesCleared;
+            
+            isGameOver = false;
+            dropInterval = DROP_INTERVAL_INIT;
+            isFastDropping = false; // Reset fast drop state
+            gameOverEl.style.display = 'none';
+            activePiece = new Piece();
+            if (animationId) cancelAnimationFrame(animationId);
+            
+            // Initialize time to prevent large delta on first frame
+            lastTime = performance.now();
+            dropCounter = 0;
+            
+            requestAnimationFrame(update);
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Grid Cells
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = grid[r][c];
+                    if (cell) {
+                        const bx = c * BLOCK_SIZE;
+                        const by = r * BLOCK_SIZE;
+                        
+                        ctx.fillStyle = cell.type === 'GREEN' ? COLOR_GREEN : COLOR_GRAY;
+                        ctx.fillRect(bx, by, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                        // Draw Char
+                        ctx.fillStyle = cell.type === 'GREEN' ? '#000' : '#AAA';
+                        ctx.font = 'bold 20px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(cell.char, bx + BLOCK_SIZE/2, by + BLOCK_SIZE/2);
+                    }
+                }
+            }
+        }
+
+        function checkLines() {
+            let linesClearedThisTick = 0;
+            let scoreToAdd = 0;
+
+            // Iterate from bottom to top
+            for (let r = ROWS - 1; r >= 0; r--) {
+                let isFull = true;
+                let isAllGreen = true;
+
+                for (let c = 0; c < COLS; c++) {
+                    if (!grid[r][c]) {
+                        isFull = false;
+                        break;
+                    }
+                    if (grid[r][c].type !== 'GREEN') {
+                        isAllGreen = false;
+                    }
+                }
+
+                if (isFull) {
+                    // Remove row (both green and gray/mixed rows clear now)
+                    grid.splice(r, 1);
+                    // Add new empty row at top
+                    grid.unshift(Array(COLS).fill(null));
+                    // Stay on this row index to check the new row that fell into this slot
+                    r++; 
+                    
+                    linesClearedThisTick++;
+                    
+                    // Only score if ALL GREEN
+                    if (isAllGreen) {
+                        scoreToAdd += 10;
+                    } else {
+                        // Mixed/Gray row: 0 points (but still clears)
+                    }
+                }
+            }
+
+            if (linesClearedThisTick > 0) {
+                totalLinesCleared += linesClearedThisTick;
+                linesEl.innerText = totalLinesCleared;
+
+                if (scoreToAdd > 0) {
+                    score += scoreToAdd;
+                    scoreEl.innerText = score;
+                }
+                
+                // Speed up: Aggressive scaling
+                // Drop interval decreases faster
+                // Starts at 1000ms
+                // -50ms per line until 10 lines (500ms)
+                // Then -20ms per line until 300ms
+                // Then -10ms down to 50ms minimum
+                
+                if (totalLinesCleared < 10) {
+                    dropInterval = Math.max(100, DROP_INTERVAL_INIT - (totalLinesCleared * 50));
+                } else if (totalLinesCleared < 30) {
+                     dropInterval = Math.max(100, 500 - ((totalLinesCleared - 10) * 20));
+                } else {
+                     dropInterval = Math.max(50, 100 - ((totalLinesCleared - 30) * 5));
+                }
+            }
+        }
+
+        function update(time = 0) {
+            if (isGameOver) return;
+            
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            dropCounter += deltaTime;
+            
+            // Use standard interval or fast drop interval (e.g., 30ms)
+            const currentInterval = isFastDropping ? 30 : dropInterval;
+
+            if (dropCounter > currentInterval) {
+                if (!activePiece.move(0, 1)) {
+                    // Lock piece
+                    activePiece.lock();
+                    isFastDropping = false; // Stop fast dropping
+                    checkLines();
+                    
+                    // Spawn new piece
+                    activePiece = new Piece();
+                    
+                    // Check Game Over (Immediate collision on spawn)
+                    if (activePiece.collides(0, 0)) {
+                        isGameOver = true;
+                        finalScoreEl.innerText = score;
+                        gameOverEl.style.display = 'block';
+                    }
+                }
+                dropCounter = 0;
+            }
+
+            drawGrid();
+            if (activePiece) activePiece.draw();
+
+            animationId = requestAnimationFrame(update);
+        }
+
+        // Function to handle input from both physical and virtual keyboards
+        function handleInput(key) {
+            if (isGameOver) return;
+
+            // Normal Game Inputs
+            // Movement
+            if (key === 'ArrowLeft') {
+                if (!isFastDropping) activePiece.move(-1, 0);
+            } else if (key === 'ArrowRight') {
+                if (!isFastDropping) activePiece.move(1, 0);
+            } else if (key === 'ArrowDown') {
+                if (!isFastDropping) {
+                    activePiece.move(0, 1);
+                    dropCounter = 0; 
+                }
+            } 
+            // Spacebar rotation: Only for 5-letter words
+            else if (key === ' ') { 
+                if (!isFastDropping) activePiece.rotate();
+            }
+            
+            else if (key === 'Enter') { // Fast Drop
+                isFastDropping = true;
+                dropCounter = dropInterval + 1; // Trigger immediate first step
+            }
+            // Typing (A-Z, 0-9, Symbols)
+            else if (key.length === 1) {
+                // Accept all printable characters
+                if (key.match(/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]$/)) {
+                    const result = activePiece.typeChar(key);
+                    if (result.correct) {
+                        // Correct letter: +1 Point
+                        score++;
+                        scoreEl.innerText = score;
+                    } else if (!result.ignored) {
+                        // Wrong letter: Lose 1 point & DROP!
+                        if (score > 0) score--;
+                        scoreEl.innerText = score;
+                        
+                        // Trigger Fast Drop
+                        isFastDropping = true;
+                        dropCounter = dropInterval + 1;
+                    }
+                }
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('keydown', (e) => {
+             // Prevent default scrolling for arrows and space
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].indexOf(e.key) > -1) {
+                e.preventDefault();
+            }
+
+            // Avoid double-firing when mobile input is focused (which handles characters via 'input' event)
+            if (e.target === mobileInput && e.key.length === 1) {
+                return;
+            }
+
+            handleInput(e.key);
+        });
+
+        // Listen to the hidden input for mobile typing
+        mobileInput.addEventListener('input', (e) => {
+            if (e.data) {
+                // Send the typed character to game logic
+                handleInput(e.data);
+            }
+            // Clear input so we don't accumulate text
+            mobileInput.value = ''; 
+        });
+
+        // Start
+        resetGame();
+
+    </script>
+</body>
+</html>
